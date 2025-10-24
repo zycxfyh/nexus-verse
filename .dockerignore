@@ -1,7 +1,32 @@
- .git
-    .github
-    node_modules
-    .turbo
-    .env
-    *.log
-    README.md
+# Dependencies
+node_modules/
+.pnpm-store/
+.devbox/
+
+# Build artifacts
+dist/
+.dist/
+build/
+.next/
+.turbo/
+
+# Docker data
+nexus-data/
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+
+# OS & Editor
+.DS_Store
+.vscode/
+.idea/
+
+# Environment
+.env*
+
+# Test artifacts
+coverage/
+playwright-report/
+test-results/

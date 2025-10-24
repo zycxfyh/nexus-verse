@@ -1,14 +1,32 @@
-# 文件路径: ./.earthlyignore
+# Dependencies
+node_modules/
+.pnpm-store/
+.devbox/
 
-.git
-.idea
-.vscode
-.devbox
-.direnv
+# Build artifacts
+dist/
+.dist/
+build/
+.next/
+.turbo/
+
+# Docker data
+nexus-data/
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+
+# OS & Editor
 .DS_Store
-/nexus-data
-/node_modules
-apps/**/node_modules
-packages/**/node_modules
-dist
-coverage
+.vscode/
+.idea/
+
+# Environment
+.env*
+
+# Test artifacts
+coverage/
+playwright-report/
+test-results/
