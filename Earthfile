@@ -1,99 +1,51 @@
-# Earthfile for Nexus Verse (V13 - The Final Fix)
+# Earthfile for Nexus Verse (V16 - The Final Commander)
 
 VERSION 0.8
 
-# --- 1. 后端服务: nexus-engine ---
-nexus-engine-image:
-    FROM node:20-slim AS builder
-    WORKDIR /app
-    RUN npm install -g pnpm@9.6.0
-    COPY package.json pnpm-lock.yaml pnpm-workspace.yaml turbo.json tsconfig.json ./
-    COPY apps/backend/package.json ./apps/backend/
-    COPY apps/frontend/package.json ./apps/frontend/
-    RUN pnpm install --frozen-lockfile
-    COPY . .
-    RUN pnpm turbo run build --filter=nexus-engine...
-    RUN pnpm --filter=nexus-engine deploy /deploy
+# --- 1. 后端服务 ---
+# COPY . . 将整个项目作为上下文提供给 BUILD 命令
+# BUILD 命令会使用指定目录下的 Dockerfile 进行构建
 
-    FROM node:20-slim
-    WORKDIR /app
-    ENV NODE_ENV=production
-    COPY --from=builder /deploy .
-    CMD ["node", "dist/main.js"]
+nexus-engine-image:
+    COPY . .
+    # --SERVICE_NAME 参数会传递给 Dockerfile 内部的 ARG
+    BUILD --SERVICE_NAME=nexus-engine ./apps/backend/apps/nexus-engine
     SAVE IMAGE nexus-verse/nexus-engine:latest
 
-# --- 2. 后端服务: creation-agent ---
 creation-agent-image:
-    FROM node:20-slim AS builder
-    WORKDIR /app
-    RUN npm install -g pnpm@9.6.0
-    COPY package.json pnpm-lock.yaml pnpm-workspace.yaml turbo.json tsconfig.json ./
-    COPY apps/backend/package.json ./apps/backend/
-    COPY apps/frontend/package.json ./apps/frontend/
-    RUN pnpm install --frozen-lockfile
     COPY . .
-    RUN pnpm turbo run build --filter=creation-agent...
-    RUN pnpm --filter=creation-agent deploy /deploy
-
-    FROM node:20-slim
-    WORKDIR /app
-    ENV NODE_ENV=production
-    COPY --from=builder /deploy .
-    CMD ["node", "dist/main.js"]
+    BUILD --SERVICE_NAME=creation-agent ./apps/backend/apps/creation-agent
     SAVE IMAGE nexus-verse/creation-agent:latest
 
-# --- 3. 后端服务: logic-agent ---
 logic-agent-image:
-    FROM node:20-slim AS builder
-    WORKDIR /app
-    RUN npm install -g pnpm@9.6.0
-    COPY package.json pnpm-lock.yaml pnpm-workspace.yaml turbo.json tsconfig.json ./
-    COPY apps/backend/package.json ./apps/backend/
-    COPY apps/frontend/package.json ./apps/frontend/
-    RUN pnpm install --frozen-lockfile
     COPY . .
-    RUN pnpm turbo run build --filter=logic-agent...
-    RUN pnpm --filter=logic-agent deploy /deploy
-
-    FROM node:20-slim
-    WORKDIR /app
-    ENV NODE_ENV=production
-    COPY --from=builder /deploy .
-    CMD ["node", "dist/main.js"]
+    BUILD --SERVICE_NAME=logic-agent ./apps/backend/apps/logic-agent
     SAVE IMAGE nexus-verse/logic-agent:latest
 
-# --- 4. 后端服务: narrative-agent ---
 narrative-agent-image:
-    FROM node:20-slim AS builder
-    WORKDIR /app
-    RUN npm install -g pnpm@9.6.0
-    COPY package.json pnpm-lock.yaml pnpm-workspace.yaml turbo.json tsconfig.json ./
-    COPY apps/backend/package.json ./apps/backend/
-    COPY apps/frontend/package.json ./apps/frontend/
-    RUN pnpm install --frozen-lockfile
     COPY . .
-    RUN pnpm turbo run build --filter=narrative-agent...
-    RUN pnpm --filter=narrative-agent deploy /deploy
-
-    FROM node:20-slim
-    WORKDIR /app
-    ENV NODE_ENV=production
-    COPY --from=builder /deploy .
-    CMD ["node", "dist/main.js"]
+    BUILD --SERVICE_NAME=narrative-agent ./apps/backend/apps/narrative-agent
     SAVE IMAGE nexus-verse/narrative-agent:latest
 
-# --- 5. 前端服务 ---
+# --- 2. 前端服务 ---
+# 前端的构建逻辑比较简单，直接放在 Earthfile 里
 frontend-image:
-    FROM node:20-slim AS builder
+    # 阶段1: 构建器
+    FROM node:20 AS builder
     WORKDIR /app
     RUN npm install -g pnpm@9.6.0
+    # 精确拷贝所需文件
     COPY package.json pnpm-lock.yaml pnpm-workspace.yaml turbo.json tsconfig.json ./
-    COPY apps/backend/package.json ./apps/backend/
     COPY apps/frontend/package.json ./apps/frontend/
+    COPY apps/backend/apps/creation-agent/package.json ./apps/backend/apps/creation-agent/
+    COPY apps/backend/apps/logic-agent/package.json ./apps/backend/apps/logic-agent/
+    COPY apps/backend/apps/narrative-agent/package.json ./apps/backend/apps/narrative-agent/
+    COPY apps/backend/apps/nexus-engine/package.json ./apps/backend/apps/nexus-engine/
     RUN pnpm install --frozen-lockfile
     COPY . .
     RUN pnpm turbo run build --filter=frontend
 
+    # 阶段2: 最终镜像
     FROM nginx:stable-alpine
     COPY --from=builder /app/apps/frontend/dist /usr/share/nginx/html
     COPY apps/frontend/nginx.conf /etc/nginx/conf.d/default.conf
