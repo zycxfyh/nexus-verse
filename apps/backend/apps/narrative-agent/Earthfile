@@ -1,0 +1,20 @@
+# narrative-agent/Earthfile
+VERSION 0.8
+
+build:
+    FROM node:20
+    WORKDIR /app
+    COPY . .
+    RUN npm install -g pnpm@9.6.0
+    RUN pnpm install --frozen-lockfile
+    RUN pnpm turbo run build --filter=narrative-agent...
+    RUN pnpm --filter=narrative-agent deploy /deploy
+    SAVE ARTIFACT /deploy AS LOCAL narrative-agent-files
+
+image:
+    FROM node:20-slim
+    WORKDIR /app
+    ENV NODE_ENV=production
+    COPY +build/narrative-agent-files .
+    CMD ["node", "dist/main.js"]
+    SAVE IMAGE nexus-verse/narrative-agent:latest

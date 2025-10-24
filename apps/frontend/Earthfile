@@ -1,0 +1,20 @@
+# frontend/Earthfile
+VERSION 0.8
+
+build:
+    FROM node:20
+    WORKDIR /app
+    COPY . .
+    RUN npm install -g pnpm@9.6.0
+    RUN pnpm install --frozen-lockfile
+    RUN pnpm turbo run build --filter=frontend
+    # 关键：产物的路径是 /app/apps/frontend/dist
+    SAVE ARTIFACT /app/apps/frontend/dist AS LOCAL frontend-files
+
+image:
+    FROM nginx:stable-alpine
+    # 产物应该被复制到 Nginx 的网站根目录
+    COPY +build/frontend-files /usr/share/nginx/html
+    # Nginx 的配置文件依然从 COPY . . 的上下文中获取
+    COPY ./apps/frontend/nginx.conf /etc/nginx/conf.d/default.conf
+    SAVE IMAGE nexus-verse/frontend:latest
